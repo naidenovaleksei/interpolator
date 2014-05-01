@@ -52,6 +52,8 @@ If you are interested in interpolating only one ndarray, you can use a 1-tuple. 
 Now, we construct the interpolator f:
 
 ```
+import interpolator
+
 f = interpolator.multilinear_interpolator( coords, data )
 ```
 
