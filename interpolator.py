@@ -2,7 +2,6 @@ __author__ = 'Fernando Gonzalez del Cueto'
 
 import numpy as np
 
-
 class multilinear_interpolator:
     """
     Create a multidimensional linear interpolator on numpy arrays.
@@ -95,7 +94,7 @@ class multilinear_interpolator:
                 breakflag = True
                 break
             else:
-                ind[k] = np.floor(tmp)
+                ind[k] = np.trunc(tmp)
                 alpha[k] = 1 - (tmp - ind[k])
 
         if breakflag:
