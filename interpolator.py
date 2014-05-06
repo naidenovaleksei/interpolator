@@ -2,6 +2,23 @@ __author__ = 'Fernando Gonzalez del Cueto'
 
 import numpy as np
 
+
+def bincombs(N):
+    """
+    Creates a list of all possible binary arrays of dimension N.
+    This is used by the multilinear interpolator to find all neighboring grid points of a point.
+    """
+    L = []
+    tmp = np.zeros(N, dtype=int)
+    for j1 in range(2 ** N):
+        s = bin(j1)[2:]
+
+        for j2 in range(1, len(s) + 1):
+            tmp[-j2] = s[-j2]
+        L.append(tuple(tmp))
+    return L
+
+
 class multilinear_interpolator:
     """
     Create a multidimensional linear interpolator on numpy arrays.
@@ -31,10 +48,10 @@ class multilinear_interpolator:
 
     # Then one can call the interpolator at any coordinate for example
 
-    (flag, output) = f( [ 29.97, -45.0, 1.5, 101 ] )
+    (error_flag, output) = f( [ 29.97, -45.0, 1.5, 101 ] )
 
-    flag is true if the coordinates are outside the domain specified by coords
-    flag is false if the interpolation is done successfully
+    error_flag is True if the coordinates are outside the domain specified by coords
+    error_flag is False if the interpolation is done successfully
 
     # If data is a dictionary, output will be a dictionary as well, with the interpolated values for each
     # of the keys contained in the original dictionary. Example:
@@ -56,6 +73,7 @@ class multilinear_interpolator:
     # any questions please contact Fernando del Cueto: fcueto@gmail.com
     # May 1, 2014
     # Houston, TX
+    # http://github.com/fejikso/interpolator
     """
 
     # Constructor
@@ -63,95 +81,77 @@ class multilinear_interpolator:
         assert isinstance(X, tuple)
 
         self.dim = len(X)
-        self.dimlen = np.zeros(self.dim, dtype=np.int64)
 
         self.n_variables = len(Y)
 
         self.X = X
         self.Y = Y
-        if isinstance(Y, dict):
-            self.output_type = 'dict'
-        elif isinstance(Y, tuple) or isinstance(Y, tuple):
+        if isinstance(Y, tuple) or isinstance(Y, list):
             self.output_type = 'list_tuple'
         else:
-            raise Exception('Y must be dictionary, list or tuple')
+            self.output_type = 'dict'
 
+        self.neighbors = bincombs(self.dim)
+
+        self.dimlen = list()
         for k in range(0, self.dim):
-            self.dimlen[k] = len(X[k])
+            #store dimensions for each coordinate vector
+            self.dimlen.append(len(X[k]))
 
     def __call__(self, coords):
         if len(coords) != self.dim:
             raise Exception('Wrong dimensions')
 
-        ind = np.zeros(self.dim, dtype=np.int32)
+        ind = []
         alpha = np.ndarray(self.dim)
         breakflag = False
-        for k in range(0, self.dim):
-            tmp = np.interp(coords[k], self.X[k], range(0, self.dimlen[k]), left=np.nan, right=np.nan)
 
-            if np.isnan(tmp):
+        for k in range(0, self.dim):
+
+            float_index = np.interp(coords[k], self.X[k], np.arange(0, self.dimlen[k]), left=np.nan, right=np.nan)
+
+            if np.isnan(float_index) or (float_index >= self.dimlen[k]):
                 # error: trying to access data outside data domain. Return nan
                 breakflag = True
                 break
             else:
-                ind[k] = np.trunc(tmp)
-                alpha[k] = 1 - (tmp - ind[k])
+                tmp = float_index
+                ind.append(tmp)
+                # alpha[k] = 1.0 - (float_index - ind[k])
 
+        beta = np.ndarray(self.dim)
         if breakflag:
             # coordinates outside domain. Return nan
 
             return (True, np.nan)
         else:
 
-            if self.output_type == 'dict':
-                #initialize output dictionary
-                output = dict(zip(self.Y.keys(), np.zeros(len(self.Y.keys()))))
+            #initialize output array
 
-                beta = alpha.copy()
-                I = ind.copy()
-
-                for jx in range(self.dim):
-
-                    for jb in range(0, 2):
-
-                        if jb == 0:
-                            beta[jx] = alpha[jx]
-                            I[jx] = I[jx]
-                        else:
-                            beta[jx] = 1.0 - alpha[jx]
-                            I[jx] = I[jx] + jb
-
-                        gamma = np.prod(beta)
-
-                        for jv in self.Y.keys():
-                            output[jv] = output[jv] + gamma * self.Y[jv][tuple(I)]
-
-                return (False, output)
-            elif self.output_type == 'list_tuple':
-                #initialize output array
-
+            if self.output_type == 'list_tuple':
                 output = np.zeros(self.n_variables)
+            elif self.output_type == 'dict':
+                output = dict(zip(self.Y.keys(), np.zeros(len(self.Y.keys()))))
+            else:
+                raise Exception('Unknown output type')
 
-                beta = alpha.copy()
-                I = ind.copy()
+            J = np.zeros(self.dim, dtype=int)
+
+            for c in self.neighbors:
 
                 for jx in range(self.dim):
+                    J[jx] = int(np.floor(ind[jx])) + c[jx]
+                    beta[jx] = 1.0 - abs(J[jx] - ind[jx])
 
-                    for jb in range(0, 2):
+                gamma = np.prod(beta)
 
-                        if jb == 0:
-                            beta[jx] = alpha[jx]
-                            I[jx] = I[jx]
-                        else:
-                            beta[jx] = 1.0 - alpha[jx]
-                            I[jx] = I[jx] + jb
+                if self.output_type == 'list_tuple':
+                    for jv in range(self.n_variables):
+                        output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
+                elif self.output_type == 'dict':
+                    for jv in self.Y.keys():
+                        output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
+                else:
+                    raise Exception('Unknown output type')
 
-                        gamma = np.prod(beta)
-
-                        for jv in range(self.n_variables):
-                            output[jv] = output[jv] + gamma * self.Y[jv][tuple(I)]
-
-                return (False, output)
-            else:
-                raise Exception('Do not know how to process output type: %s ' % self.output_type)
-
+            return (False, output)
