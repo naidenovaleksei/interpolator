@@ -1,8 +1,7 @@
 interpolator
 ============
 
-Multidimensional linear interpolation for numpy arrays
-
+Multidimensional linear interpolation for numpy arrays.  Attempts to imitate the functionality of Matlab's interpn function.
 
 Create a multidimensional linear interpolator on numpy arrays.
 
