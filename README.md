@@ -60,11 +60,11 @@ f = interpolator.multilinear_interpolator( coords, data )
 Now one can call the interpolator at any coordinate. For example
 
 ```
-(flag, output) = f( [ 29.97, -45.0, 1.5, 101 ] )
+(error_flag, output) = f( [ 29.97, -45.0, 1.5, 101 ] )
 ```
 
-flag is true if the coordinates are outside the domain specified by coords
-flag is false if the interpolation is done successfully
+error_flag is true if the coordinates are outside the domain specified by coords
+error_flag is false if the interpolation is done successfully
 
 If data is a dictionary, output will be a dictionary as well, with the interpolated values for each
 of the keys contained in the original dictionary. Example:
