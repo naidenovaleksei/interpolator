@@ -147,10 +147,12 @@ class multilinear_interpolator:
 
                 if self.output_type == 'list_tuple':
                     for jv in range(self.n_variables):
-                        output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
+                        if gamma and tuple(J + 1) < self.Y[0].shape:
+                            output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
                 elif self.output_type == 'dict':
                     for jv in self.Y.keys():
-                        output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
+                        if gamma and tuple(J + 1) < self.Y[0].shape:
+                            output[jv] = output[jv] + gamma * self.Y[jv][tuple(J)]
                 else:
                     raise Exception('Unknown output type')
 
